@@ -1,82 +1,137 @@
+" ============================================================
+" 🌟 General Settings
+" ============================================================
 set nocompatible
 filetype plugin indent on
 syntax enable
-
 set encoding=utf-8
+set fileencoding=utf-8
+set termencoding=utf-8
 set number relativenumber
 set cursorline
 set showmatch
 set wildmenu
 set wildmode=longest:full,full
 
-set tabstop=8
-set shiftwidth=8
-set noexpandtab
-set autoindent
-set smartindent
+" ============================================================
+" 📝 Tabs & Indentation
+" ============================================================
+set tabstop=8 shiftwidth=8 noexpandtab autoindent smartindent
+augroup FileTypeIndent
+    autocmd!
+    autocmd FileType python,rust,zig setlocal expandtab tabstop=4 shiftwidth=4
+    autocmd FileType sh,bash,yaml,yml,json setlocal expandtab tabstop=2 shiftwidth=2
+augroup END
 
-autocmd FileType python setlocal expandtab tabstop=4 shiftwidth=4
-autocmd FileType rust setlocal expandtab tabstop=4 shiftwidth=4
-autocmd FileType zig setlocal expandtab tabstop=4 shiftwidth=4
-autocmd FileType sh,bash setlocal expandtab tabstop=2 shiftwidth=2
-autocmd FileType yaml,yml setlocal expandtab tabstop=2 shiftwidth=2
-autocmd FileType json setlocal expandtab tabstop=2 shiftwidth=2
-
-set ignorecase
-set smartcase
-set incsearch
-set hlsearch
+" ============================================================
+" 🔍 Search Settings
+" ============================================================
+set ignorecase smartcase incsearch hlsearch
 nnoremap <silent> <Space> :nohlsearch<CR>
 
-set lazyredraw
-set ttyfast
-set scrolloff=5
-set updatetime=300
-set timeoutlen=500
+" ============================================================
+" 💨 Performance
+" ============================================================
+set lazyredraw ttyfast scrolloff=5
+set updatetime=200
+set timeoutlen=400
 
-set nobackup
-set nowritebackup
-set noswapfile
+" ============================================================
+" 💾 Backup & Swap
+" ============================================================
+set nobackup nowritebackup noswapfile
 
+" ============================================================
+" 🖥 Statusline
+" ============================================================
 set laststatus=2
-set statusline=%F
-set statusline+=\ %m
-set statusline+=\ %r
-set statusline+=%=
-set statusline+=\ %y
-set statusline+=\ %l:%c
-set statusline+=\ %p%%
+set statusline=%F\ %m%r\ %=%y\ %l:%c\ %p%%
 
-nnoremap <C-h> <C-w>h
-nnoremap <C-j> <C-w>j
-nnoremap <C-k> <C-w>k
-nnoremap <C-l> <C-w>l
+" ============================================================
+" 🪟 Window Navigation & Smooth Splits
+" ============================================================
+" Smooth window movement with small delays to feel “animated”
+function! s:WinMove(direction)
+    execute "wincmd " . a:direction
+    redraw
+    sleep 20m
+endfunction
 
-set splitbelow
-set splitright
+nnoremap <C-h> :call <SID>WinMove('h')<CR>
+nnoremap <C-j> :call <SID>WinMove('j')<CR>
+nnoremap <C-k> :call <SID>WinMove('k')<CR>
+nnoremap <C-l> :call <SID>WinMove('l')<CR>
+set splitbelow splitright
 
+" ============================================================
+" 📂 File Navigation & Tags
+" ============================================================
 set tags=./tags;,tags;
 nnoremap <F12> :!ctags -R .<CR>
 
-highlight OverLength ctermbg=red ctermfg=white guibg=#592929
-match OverLength /\%81v.\+/
-
-function! KernelCheckpatch()
-    let l:file = expand('%:p')
-    execute '!./scripts/checkpatch.pl --no-tree -f ' . l:file
+" Animated NERDTree toggle
+function! ToggleNERDTree()
+    if exists("t:NERDTreeBufName")
+        execute ":NERDTreeClose"
+        redraw
+        sleep 50m
+    else
+        execute ":NERDTreeToggle"
+        redraw
+        sleep 50m
+    endif
 endfunction
-command! CheckPatch call KernelCheckpatch()
+nnoremap <C-n> :call ToggleNERDTree()<CR>
+nnoremap <C-p> :Files<CR>
+nnoremap <Leader>f :Rg<CR>
+nnoremap <Leader>b :Buffers<CR>
 
+" Animated Tagbar toggle
+function! ToggleTagbar()
+    if tagbar#isopen()
+        TagbarClose
+        redraw
+        sleep 50m
+    else
+        TagbarOpen
+        redraw
+        sleep 50m
+    endif
+endfunction
+nnoremap <F8> :call ToggleTagbar()<CR>
+
+" ============================================================
+" ⚡ Highlight Long Lines with Gradient
+" ============================================================
+" lines 81-100 red, 101-120 orange, >120 purple
+highlight Over80 guibg=#550000
+highlight Over100 guibg=#663300
+highlight Over120 guibg=#222222
+
+match Over80 /\%81v.\+/
+match Over100 /\%101v.\+/
+match Over120 /\%121v.\+/
+
+" ============================================================
+" 🛠 Build & Run Commands
+" ============================================================
 nnoremap <F5> :make<CR>
 nnoremap <F6> :make clean<CR>
+augroup RustBuild
+    autocmd!
+    autocmd FileType rust nnoremap <F5> :!cargo build<CR>
+    autocmd FileType rust nnoremap <F6> :!cargo test<CR>
+    autocmd FileType rust nnoremap <F7> :!cargo run<CR>
+augroup END
+augroup ZigBuild
+    autocmd!
+    autocmd FileType zig nnoremap <F5> :!zig build<CR>
+    autocmd FileType zig nnoremap <F7> :!zig build run<CR>
+augroup END
 
-autocmd FileType rust nnoremap <F5> :!cargo build<CR>
-autocmd FileType rust nnoremap <F6> :!cargo test<CR>
-autocmd FileType rust nnoremap <F7> :!cargo run<CR>
-
-autocmd FileType zig nnoremap <F5> :!zig build<CR>
-autocmd FileType zig nnoremap <F7> :!zig build run<CR>
-
+" ============================================================
+" 🏷 Header Guard for C/C++ headers
+" ============================================================
 function! InsertHeaderGuard()
     let guard = toupper(substitute(expand('%:t'), '[^0-9a-zA-Z_]', '_', 'g'))
     call append(0, '#ifndef ' . guard)
@@ -87,55 +142,78 @@ function! InsertHeaderGuard()
 endfunction
 autocmd BufNewFile *.h call InsertHeaderGuard()
 
-autocmd BufNewFile *.sh 0put =\"#!/bin/bash\<nl>\"|$
-
+" ============================================================
+" 🐚 Shell Scripts
+" ============================================================
+autocmd BufNewFile *.sh 0put =\"#!/bin/bash\<nl>\"
+autocmd VimEnter * Startify
+" ============================================================
+" 🔧 Git
+" ============================================================
 nnoremap <Leader>gb :!git blame -L <C-r>=line('.')<CR>,<C-r>=line('.')<CR> %<CR>
 
+" ============================================================
+" ⚡ Misc Shortcuts
+" ============================================================
 nnoremap <Leader>ev :edit $MYVIMRC<CR>
 nnoremap <Leader>sv :source $MYVIMRC<CR>
-
 cnoremap w!! execute 'silent! write !sudo tee % >/dev/null' <bar> edit!
-
 set pastetoggle=<F2>
-
 nnoremap <Leader>w :w<CR>
 nnoremap <Leader>q :q<CR>
 nnoremap <Leader>rw :%s/\s\+$//e<CR>
 
+" ============================================================
+" 📦 Plugins
+" ============================================================
 call plug#begin('~/.vim/plugged')
 
-Plug 'catppuccin/vim', { 'as': 'catppuccin' }
+" Themes
+" Git
 Plug 'tpope/vim-fugitive'
 Plug 'airblade/vim-gitgutter'
+Plug 'mhinz/vim-startify'
+" Navigation & Search
 Plug 'preservim/nerdtree'
 Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
 Plug 'junegunn/fzf.vim'
+Plug 'preservim/tagbar'
+
+" Linting & Fixing
 Plug 'dense-analysis/ale'
+
+" Languages
 Plug 'rust-lang/rust.vim'
 Plug 'ziglang/zig.vim'
 Plug 'vim-scripts/a.vim'
+
+" Editing Helpers
 Plug 'tpope/vim-commentary'
 Plug 'tpope/vim-surround'
 Plug 'jiangmiao/auto-pairs'
-Plug 'vim-airline/vim-airline'
-Plug 'vim-airline/vim-airline-themes'
-Plug 'preservim/tagbar'
 Plug 'sheerun/vim-polyglot'
 Plug 'editorconfig/editorconfig-vim'
-Plug 'neoclide/coc.nvim', {'branch': 'release'}
 
+" UI
+Plug 'vim-airline/vim-airline'
+Plug 'vim-airline/vim-airline-themes'
+
+" LSP & Autocomplete
+Plug 'neoclide/coc.nvim', {'branch': 'release'}
+Plug 'morhetz/gruvbox'
 call plug#end()
 
+" ============================================================
+" 🎨 Theme & Airline
+" ============================================================
 set termguicolors
-colorscheme catppuccin_macchiato
-let g:airline_theme = 'catppuccin_macchiato'
+colorscheme gruvbox
+let g:airline_theme='gruvbox'
 
-nnoremap <C-n> :NERDTreeToggle<CR>
-nnoremap <C-p> :Files<CR>
-nnoremap <Leader>f :Rg<CR>
-nnoremap <Leader>b :Buffers<CR>
-nnoremap <F8> :TagbarToggle<CR>
 
+" ============================================================
+" 💡 ALE Configuration
+" ============================================================
 let g:ale_linters = {
 \   'c': ['clang', 'gcc'],
 \   'rust': ['cargo', 'rustc'],
@@ -147,33 +225,27 @@ let g:ale_fixers = {
 \   'python': ['black'],
 \}
 let g:ale_fix_on_save = 1
-
 let g:rust_fmt_autosave = 1
 let g:zig_fmt_autosave = 1
 
-inoremap <silent><expr> <TAB>
-      \ coc#pum#visible() ? coc#pum#next(1) :
-      \ CheckBackspace() ? "\<Tab>" :
-      \ coc#refresh()
+" ============================================================
+" 💡 CoC (LSP & Completion)
+" ============================================================
+inoremap <silent><expr> <TAB> coc#pum#visible() ? coc#pum#next(1) : CheckBackspace() ? "\<Tab>" : coc#refresh()
 inoremap <expr><S-TAB> coc#pum#visible() ? coc#pum#prev(1) : "\<C-h>"
-
-inoremap <silent><expr> <CR> coc#pum#visible() ? coc#pum#confirm()
-                              \: "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>"
+inoremap <silent><expr> <CR> coc#pum#visible() ? coc#pum#confirm() : "\<C-g>u\<CR>\<c-r>=coc#on_enter()\<CR>"
+inoremap <silent><expr> <c-space> coc#refresh()
 
 function! CheckBackspace() abort
   let col = col('.') - 1
-  return !col || getline('.')[col - 1]  =~# '\s'
+  return !col || getline('.')[col - 1] =~# '\s'
 endfunction
-
-inoremap <silent><expr> <c-space> coc#refresh()
 
 nmap <silent> gd <Plug>(coc-definition)
 nmap <silent> gy <Plug>(coc-type-definition)
 nmap <silent> gi <Plug>(coc-implementation)
 nmap <silent> gr <Plug>(coc-references)
-
 nnoremap <silent> K :call ShowDocumentation()<CR>
-
 function! ShowDocumentation()
   if CocAction('hasProvider', 'hover')
     call CocActionAsync('doHover')
@@ -181,9 +253,12 @@ function! ShowDocumentation()
     call feedkeys('K', 'in')
   endif
 endfunction
-
 nmap <leader>rn <Plug>(coc-rename)
 
+" ============================================================
+" 🌱 Local Overrides
+" ============================================================
 if filereadable(expand('~/.vimrc.local'))
     source ~/.vimrc.local
 endif
+
